@@ -38,11 +38,13 @@ case when A.MWH_WhsName = 'SCM-TMFC' then '1'
 	 when A.MWH_WhsName = 'SCM-STN' then 'OSW2'
 	 when A.MWH_WhsName = 'SCM-SCGL' then 'OSW3'
 	 when A.MWH_WhsName = 'SCM-CJW' then 'OSW4'
-	 end as 'Location'
+	 end as 'Location',
+case when A.MWL_LocationName = 'Hold' then '3'
+	 end as 'Stocktype'
 from vw_iERP_MFC_LocTransOut A
 left join vw_MFC_CostCenter_Transfer B on A.Key_TransNbr = B.ITR_TransNbr
 where ((A.MWH_WhsName like 'SCM%' and B.MWH_WhsName not like 'SCM%') or A.Key_TransNbr is null)
 and A.IMA_LeadTimeCode = 'Purchased' 
 and (A.IMA_ItemTypeCode in ('10-RM','32-Supply')) 
-and A.IMA_SupercededItemID is not null 
+and A.IMA_SupercededItemID is not null
 ```
