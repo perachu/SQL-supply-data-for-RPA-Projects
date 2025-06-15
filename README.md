@@ -1,7 +1,7 @@
 # SQL-supply-data-for-RPA-Projects
 ## Extract and Transform data from database to supply for RPA Projects(ETL data pipelines)
 
-1) Flow1:
+1) Flow1: Transaction for receiving finished goods(FG) from production line to stock warehouse
 ```sql
 select ReceivedDate, SCMDate, WKO_ItemID, IMA_SupercededItemID, WSS_SubmitQty, A.IMA_UnitMeasure, IMA_SalesConvFactor,
 WSS_SubmitQty/IMA_SalesConvFactor as QtySAP, PDLot, WSS_Status, IMA_ProdFam, B.IMA_ItemName, Attribute9_Value as CostCenter,
@@ -21,7 +21,7 @@ and IMA_SupercededItemID is not null
 and WSS_Status = 'Received'
 ```
 
-2) Flow2:
+2) Flow2: Transaction for issue material from stock warehouse to production line
 
 ```sql
 select A.ITR_TransType, A.ITR_TransDate, A.GLT_TransDate, A.IMA_ItemName, A.ITR_ItemID, 
