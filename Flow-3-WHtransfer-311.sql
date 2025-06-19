@@ -1,4 +1,4 @@
---Flow_311_WHtransfer
+-Flow-3-Warehouse-transfer
 select A.ITR_TransType, A.ITR_TransDate, A.GLT_TransDate, A.IMA_ItemName, A.IMA_SupercededItemID, 
 A.TransQty, A.ITR_StockingUnitMeasure, A.IMA_PurConvFactor, A.CostCenter, A.MLT_LotNbr, 
 A.MWH_WhsName as 'MWH_WhsName_Out' , A.MWL_LocationName as 'MWL_LocationName_Out', 
