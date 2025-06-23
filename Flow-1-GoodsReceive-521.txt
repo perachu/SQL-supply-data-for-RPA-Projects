@@ -1,0 +1,132 @@
+SET Transaction_Date_Start TO $'''2025-01-31 00:00:00.000'''
+SET Transaction_Date_End TO $'''2025-01-31 12:00:00.000'''
+CALL Sub_ConfigDict
+CALL Sub_SAPLogin
+CALL Sub_DatabaseConnect
+Database.ExecuteSqlStatement.Execute Connection: SQLConnect_Server Statement: $'''SELECT distinct [ReceivedFormattedDate]
+  FROM [TMFCiERP90].[dbo].[vw_RPA_MFC_Flow1_GR521]
+
+ where SCMDate between \'%Transaction_Date_Start%\' and \'%Transaction_Date_End%\'''' Timeout: 30 Result=> SQLRead_ReceivedDate
+LOOP FOREACH Distinct_ReceivedDate IN SQLRead_ReceivedDate
+    SET sDocandPostDateScript TO $'''session.findById(\"wnd[0]/usr/ssubSUB_MAIN_CARRIER:SAPLMIGO:0002/subSUB_HEADER:SAPLMIGO:0101/subSUB_HEADER:SAPLMIGO:0100/tabsTS_GOHEAD/tabpOK_GOHEAD_GENERAL/ssubSUB_TS_GOHEAD_GENERAL:SAPLMIGO:0112/ctxtGOHEAD-BLDAT\").text = \"%Distinct_ReceivedDate%\"
+session.findById(\"wnd[0]/usr/ssubSUB_MAIN_CARRIER:SAPLMIGO:0002/subSUB_HEADER:SAPLMIGO:0101/subSUB_HEADER:SAPLMIGO:0100/tabsTS_GOHEAD/tabpOK_GOHEAD_GENERAL/ssubSUB_TS_GOHEAD_GENERAL:SAPLMIGO:0112/ctxtGOHEAD-BUDAT\").text = \"%Distinct_ReceivedDate%\"'''
+    Database.ExecuteSqlStatement.Execute Connection: SQLConnect_Server Statement: $''' SELECT TOP (1000) [SCMDate]
+	  ,[SCMFormattedDate]
+	  ,[ReceivedFormattedDate]
+         ,[IMA_SupercededItemID]
+         ,[QtySAP]
+	  ,[UnE]
+	  ,[Location]
+	  ,[CostCenter]
+      ,[PDLot]
+      ,[Stocktype]
+  FROM [TMFCiERP90].[dbo].[vw_RPA_MFC_Flow1_GR521]
+  
+  where SCMDate between \'%Transaction_Date_Start%\' and \'%Transaction_Date_End%\' and ReceivedFormattedDate = \'%Distinct_ReceivedDate%\' 
+  ''' Timeout: 30 Result=> SQLRead_ItemDetail
+    Text.FromNumber Number: nCountA DecimalPlaces: 0 UseThousandsSeparator: True FormattedNumber=> sFormattedCountA
+    Text.FromNumber Number: nCountB DecimalPlaces: 0 UseThousandsSeparator: True FormattedNumber=> sFormattedCountB
+    LOOP FOREACH Current_ItemDetail IN SQLRead_ItemDetail
+        # Set Item Script
+        SET sMatShortText TO $'''session.findById(\"wnd[0]/usr/ssubSUB_MAIN_CARRIER:SAPLMIGO:0002/subSUB_ITEMLIST:SAPLMIGO:0200/tblSAPLMIGOTV_GOITEM/ctxtGOITEM-MAKTX[1,%sFormattedCountA%]\").text = \"%Current_ItemDetail['IMA_SupercededItemID']%\"'''
+        SET sQtyinUnE TO $'''session.findById(\"wnd[0]/usr/ssubSUB_MAIN_CARRIER:SAPLMIGO:0002/subSUB_ITEMLIST:SAPLMIGO:0200/tblSAPLMIGOTV_GOITEM/txtGOITEM-ERFMG[4,%sFormattedCountA%]\").text = \"%Current_ItemDetail['QtySAP']%\"'''
+        SET sUnE TO $'''session.findById(\"wnd[0]/usr/ssubSUB_MAIN_CARRIER:SAPLMIGO:0002/subSUB_ITEMLIST:SAPLMIGO:0200/tblSAPLMIGOTV_GOITEM/ctxtGOITEM-ERFME[5,%sFormattedCountA%]\").text = \"%Current_ItemDetail['UnE']%\"'''
+        SET sLoc TO $'''session.findById(\"wnd[0]/usr/ssubSUB_MAIN_CARRIER:SAPLMIGO:0002/subSUB_ITEMLIST:SAPLMIGO:0200/tblSAPLMIGOTV_GOITEM/ctxtGOITEM-LGOBE[6,%sFormattedCountA%]\").text = \"%Current_ItemDetail['Location']%\"'''
+        SET sCostCenter TO $'''session.findById(\"wnd[0]/usr/ssubSUB_MAIN_CARRIER:SAPLMIGO:0002/subSUB_ITEMLIST:SAPLMIGO:0200/tblSAPLMIGOTV_GOITEM/ctxtGOITEM-KOSTL[7,%sFormattedCountA%]\").text = \"%Current_ItemDetail['CostCenter']%\"'''
+        SET sBatch TO $'''session.findById(\"wnd[0]/usr/ssubSUB_MAIN_CARRIER:SAPLMIGO:0002/subSUB_ITEMLIST:SAPLMIGO:0200/tblSAPLMIGOTV_GOITEM/ctxtGOITEM-CHARG[11,%sFormattedCountA%]\").text = \"%Current_ItemDetail['PDLot']%\"'''
+        SET sStockType TO $'''session.findById(\"wnd[0]/usr/ssubSUB_MAIN_CARRIER:SAPLMIGO:0002/subSUB_ITEMLIST:SAPLMIGO:0200/tblSAPLMIGOTV_GOITEM/cmbGOITEM-MIGO_INSMK[15,%sFormattedCountA%]\").key = \"%Current_ItemDetail['Stocktype']%\"'''
+        SET sDateofManufact TO $'''session.findById(\"wnd[0]/usr/ssubSUB_MAIN_CARRIER:SAPLMIGO:0002/subSUB_ITEMLIST:SAPLMIGO:0200/tblSAPLMIGOTV_GOITEM/ctxtGOITEM-HSDAT[35,%sFormattedCountA%]\").text = \"%Distinct_ReceivedDate%\"'''
+        # Script Grouping
+        SET sItemScript1 TO $'''%sMatShortText%
+%sQtyinUnE%
+%sUnE%
+%sLoc%
+%sCostCenter%
+%sVirKey_Enter%'''
+        SET sLocScript TO $'''%sPrimaryLoc%
+%sVirKey_Enter%'''
+        SET sItemScript2 TO $'''%sBatch%
+%sStockType%
+%sDateofManufact%
+%sVirKey_Enter%'''
+        SET sSchrollbarDownScript TO $'''session.findById(\"wnd[0]/usr/ssubSUB_MAIN_CARRIER:SAPLMIGO:0002/subSUB_ITEMLIST:SAPLMIGO:0200/tblSAPLMIGOTV_GOITEM\").verticalScrollbar.position = %sFormattedCountB%'''
+        # Script Setting
+        SET sScriptA TO $'''%sItemScript1%
+%sLocScript%
+%sItemScript2%'''
+        SET sScriptB TO $'''%sItemScript1%
+%sItemScript2%'''
+        SET sScriptC TO $'''%sScriptA%
+%sSchrollbarDownScript%'''
+        SET sScriptD TO $'''%sScriptB%
+%sSchrollbarDownScript%'''
+        IF sFormattedCountA < dConfig['SAPLimitTable'] THEN
+            IF Current_ItemDetail['Location'] = 1 THEN
+                SET sAssignedScript TO sScriptA
+            ELSE
+                SET sAssignedScript TO sScriptB
+            END
+        ELSE
+            IF Current_ItemDetail['Location'] = 1 THEN
+                SET sAssignedScript TO sScriptC
+            ELSE
+                SET sAssignedScript TO sScriptD
+            END
+        END
+        # Write Script
+        SET sMainScript TO $'''%sMainScript%
+%sAssignedScript%'''
+        IF (File.IfFile.Exists File: dConfig['SAPScriptPath']) THEN
+            File.Delete Files: dConfig['SAPScriptPath']
+        END
+        File.WriteText File: dConfig['SAPScriptPath'] TextToWrite: $'''%sHeaderScript%
+%sSetupScript_Flow1_521%
+%sDocandPostDateScript%%sMainScript%''' AppendNewLine: False IfFileExists: File.IfFileExists.Append Encoding: File.FileEncoding.Unicode
+        # Counter Setting Step
+        IF sFormattedCountA < dConfig['SAPLimitTable'] THEN
+            Variables.IncreaseVariable Value: sFormattedCountA IncrementValue: 1
+        ELSE
+            SET sFormattedCountA TO dConfig['SAPLimitTable']
+        END
+        IF sFormattedCountA >= dConfig['SAPLimitTable'] THEN
+            Variables.IncreaseVariable Value: sFormattedCountB IncrementValue: 1
+        ELSE
+            SET sFormattedCountB TO 0
+        END
+    END
+    File.ReadTextFromFile.ReadText File: dConfig['SAPScriptPath'] Encoding: File.TextFileEncoding.UTF8 Content=> FileVBSContents
+    @@copilotGeneratedAction: 'False'
+Scripting.RunVBScript.RunVBScript VBScriptCode: FileVBSContents ScriptOutput=> VBScriptOutput
+    WAIT 30
+    SAP.AttachToRunning.AttachToRunningSapByActiveSession SapInstance=> SapInstance
+    UIAutomation.GetElementDetails Element: appmask['Window \'Goods  ...  benjaraj|038683760\'']['Gui Status Pane \'pane[0]\' 5'] AttributeName: $'''Own Text''' BringToFront: True AttributeValue=> AttributeValue
+    Display.ShowMessageDialog.ShowMessage Message: AttributeValue Icon: Display.Icon.None Buttons: Display.Buttons.OK DefaultButton: Display.DefaultButton.Button1 IsTopMost: False ButtonPressed=> ButtonPressed
+    IF Contains(AttributeValue, $'''posted''', False) THEN
+        DISABLE Display.ShowMessageDialog.ShowMessage Message: $'''goodddy''' Icon: Display.Icon.None Buttons: Display.Buttons.OK DefaultButton: Display.DefaultButton.Button1 IsTopMost: False ButtonPressed=> ButtonPressed2
+    END
+    SET sMainScript TO sResetText
+END
+
+# [ControlRepository][PowerAutomateDesktop]
+
+{
+  "ControlRepositorySymbols": [
+    {
+      "IgnoreImagesOnSerialization": false,
+      "Repository": "{\r\n  \"Screens\": [\r\n    {\r\n      \"Controls\": [\r\n        {\r\n          \"AutomationProtocol\": \"sap\",\r\n          \"ScreenShot\": null,\r\n          \"ElementTypeName\": \"Gui Status Pane\",\r\n          \"InstanceId\": \"1ae8e662-c1b2-450e-aa8a-2200104f9a13\",\r\n          \"Name\": \"Gui Status Pane 'pane[0]' 5\",\r\n          \"SelectorCount\": 1,\r\n          \"Selectors\": [\r\n            {\r\n              \"CustomSelector\": null,\r\n              \"Elements\": [\r\n                {\r\n                  \"Attributes\": [\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Enabled\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": true\r\n                    },\r\n                    {\r\n                      \"Ignore\": false,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Id\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": \"wnd[0]\"\r\n                    },\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Name\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": \"wnd[0]\"\r\n                    },\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": true,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Ordinal\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": 0\r\n                    },\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Text\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": \"Goods Receipt Other - SCM-Contractor benjaraj|038683760\"\r\n                    },\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Visible\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": true\r\n                    }\r\n                  ],\r\n                  \"CustomValue\": null,\r\n                  \"Ignore\": false,\r\n                  \"Name\": \"Gui Main Window 'wnd[0]'\",\r\n                  \"Tag\": \"GuiMainWindow\"\r\n                },\r\n                {\r\n                  \"Attributes\": [\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Enabled\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": false\r\n                    },\r\n                    {\r\n                      \"Ignore\": false,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Id\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": \"wnd[0]/sbar\"\r\n                    },\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Name\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": \"sbar\"\r\n                    },\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": true,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Ordinal\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": 0\r\n                    },\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Text\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": \"\"\r\n                    },\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Visible\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": true\r\n                    }\r\n                  ],\r\n                  \"CustomValue\": null,\r\n                  \"Ignore\": false,\r\n                  \"Name\": \"Gui Statusbar 'sbar'\",\r\n                  \"Tag\": \"GuiStatusbar\"\r\n                },\r\n                {\r\n                  \"Attributes\": [\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Enabled\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": false\r\n                    },\r\n                    {\r\n                      \"Ignore\": false,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Id\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": \"wnd[0]/sbar/pane[0]\"\r\n                    },\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Name\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": \"pane[0]\"\r\n                    },\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": true,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Ordinal\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": 0\r\n                    },\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Text\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": \"\"\r\n                    },\r\n                    {\r\n                      \"Ignore\": true,\r\n                      \"IsOrdinal\": false,\r\n                      \"IsDisabledAttribute\": false,\r\n                      \"Name\": \"Visible\",\r\n                      \"Operation\": \"EqualTo\",\r\n                      \"Value\": true\r\n                    }\r\n                  ],\r\n                  \"CustomValue\": null,\r\n                  \"Ignore\": false,\r\n                  \"Name\": \"Gui Status Pane 'pane[0]'\",\r\n                  \"Tag\": \"GuiStatusPane\"\r\n                }\r\n              ],\r\n              \"Ignore\": false,\r\n              \"ImageSelector\": null,\r\n              \"IsCustom\": false,\r\n              \"IsImageBased\": false,\r\n              \"IsPlaceholderSelector\": false,\r\n              \"IsWindowsInstance\": false,\r\n              \"Name\": \"Default Selector\",\r\n              \"Properties\": []\r\n            }\r\n          ],\r\n          \"Tag\": \"GuiStatusPane\",\r\n          \"ScreenshotPath\": \"controlRepo-screenshots\\\\9ef752a6-60af-4149-a587-aaf7e4d8dc03.png\"\r\n        }\r\n      ],\r\n      \"Handle\": {\r\n        \"value\": 0\r\n      },\r\n      \"ProcessName\": null,\r\n      \"ScreenShot\": null,\r\n      \"ElementTypeName\": \"Window\",\r\n      \"InstanceId\": \"7ef7dc87-66c0-420a-a10f-2ec65e3b754f\",\r\n      \"Name\": \"Window 'Goods  ...  benjaraj|038683760'\",\r\n      \"SelectorCount\": 1,\r\n      \"Selectors\": [\r\n        {\r\n          \"CustomSelector\": null,\r\n          \"Elements\": [\r\n            {\r\n              \"Attributes\": [\r\n                {\r\n                  \"Ignore\": true,\r\n                  \"IsOrdinal\": false,\r\n                  \"IsDisabledAttribute\": false,\r\n                  \"Name\": \"Class\",\r\n                  \"Operation\": \"EqualTo\",\r\n                  \"Value\": \"SAP_FRONTEND_SESSION\"\r\n                },\r\n                {\r\n                  \"Ignore\": true,\r\n                  \"IsOrdinal\": false,\r\n                  \"IsDisabledAttribute\": false,\r\n                  \"Name\": \"Enabled\",\r\n                  \"Operation\": \"EqualTo\",\r\n                  \"Value\": true\r\n                },\r\n                {\r\n                  \"Ignore\": true,\r\n                  \"IsOrdinal\": false,\r\n                  \"IsDisabledAttribute\": false,\r\n                  \"Name\": \"Id\",\r\n                  \"Operation\": \"EqualTo\",\r\n                  \"Value\": \"\"\r\n                },\r\n                {\r\n                  \"Ignore\": false,\r\n                  \"IsOrdinal\": false,\r\n                  \"IsDisabledAttribute\": false,\r\n                  \"Name\": \"Name\",\r\n                  \"Operation\": \"EqualTo\",\r\n                  \"Value\": \"Goods Receipt Other - SCM-Contractor benjaraj|038683760\"\r\n                },\r\n                {\r\n                  \"Ignore\": true,\r\n                  \"IsOrdinal\": true,\r\n                  \"IsDisabledAttribute\": false,\r\n                  \"Name\": \"Ordinal\",\r\n                  \"Operation\": \"EqualTo\",\r\n                  \"Value\": 0\r\n                },\r\n                {\r\n                  \"Ignore\": false,\r\n                  \"IsOrdinal\": false,\r\n                  \"IsDisabledAttribute\": false,\r\n                  \"Name\": \"Process\",\r\n                  \"Operation\": \"EqualTo\",\r\n                  \"Value\": \"saplogon\"\r\n                },\r\n                {\r\n                  \"Ignore\": true,\r\n                  \"IsOrdinal\": false,\r\n                  \"IsDisabledAttribute\": false,\r\n                  \"Name\": \"Visible\",\r\n                  \"Operation\": \"EqualTo\",\r\n                  \"Value\": true\r\n                }\r\n              ],\r\n              \"CustomValue\": null,\r\n              \"Ignore\": false,\r\n              \"Name\": \"Window 'Goods Receipt Other - SCM-Contractor benjaraj|038683760'\",\r\n              \"Tag\": \"window\"\r\n            }\r\n          ],\r\n          \"Ignore\": false,\r\n          \"ImageSelector\": null,\r\n          \"IsCustom\": false,\r\n          \"IsImageBased\": false,\r\n          \"IsPlaceholderSelector\": false,\r\n          \"IsWindowsInstance\": false,\r\n          \"Name\": \"Default Selector\",\r\n          \"Properties\": []\r\n        }\r\n      ],\r\n      \"Tag\": \"window\",\r\n      \"ScreenshotPath\": \"controlRepo-screenshots\\\\80e6f842-fee1-44ab-a594-6cac3d679290.png\"\r\n    }\r\n  ],\r\n  \"Version\": 1\r\n}",
+      "ImportMetadata": {
+        "DisplayName": "Local computer",
+        "ConnectionString": "",
+        "Type": "Local",
+        "DesktopType": "local"
+      },
+      "Name": "appmask"
+    }
+  ],
+  "ImageRepositorySymbol": {
+    "Repository": "{\r\n  \"Folders\": [],\r\n  \"Images\": [],\r\n  \"Version\": 1\r\n}",
+    "ImportMetadata": {},
+    "Name": "imgrepo"
+  },
+  "ConnectionReferences": []
+}
